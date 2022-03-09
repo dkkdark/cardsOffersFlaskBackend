@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from flask import Flask
 from flask_login import LoginManager
@@ -19,6 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 app.config['SECURITY_PASSWORD_SALT'] = 'my_precious_two'
 
 app.config["JWT_SECRET_KEY"] = 'NKzaz6EZ1sckfnMEvQzJxp2WANn0aHRs52olHLNW_JU'
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(weeks=25)
 
 app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
 app.config['MAIL_PORT'] = 465

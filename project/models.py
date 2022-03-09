@@ -53,7 +53,7 @@ class Card(db.Model):
     cost: int = db.Column(db.Integer, nullable=False)
     active: bool = db.Column(db.Boolean, nullable=False)
     agreement: bool = db.Column(db.Boolean, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id: str = db.Column(db.String, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
         return f"Card('{self.title}', '{self.description}', '{self.date}', '{self.createTime}', '{self.cost}', '{self.active}', '{self.agreement}')"
@@ -74,5 +74,5 @@ class User(db.Model):
     cards: list[Card] = db.relationship('Card', backref='user', lazy=True)
 
     def __repr__(self):
-        return f"User('{self.username}', '{self.email}', '{self.password}')"
+        return f"User('{self.id}, {self.username}', '{self.email}', '{self.password}')"
 

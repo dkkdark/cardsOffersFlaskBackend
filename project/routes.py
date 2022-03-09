@@ -12,18 +12,16 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 
 
 @app.route('/is_current_user_exist', methods=['GET'])
-# @login_token_required
 @jwt_required()
 def is_current_user_exist():
     gotten_token = get_jwt_identity()
-    print(gotten_token)
     current_user = User.query.filter_by(id=gotten_token).first()
     if current_user:
         return jsonify({"id": current_user.id, "username": current_user.username, "email": current_user.email, "password": current_user.password,
-                        "rating": current_user.rating, "isExecutor": current_user.isExecutor, "confirmed": current_user.confirmed,
+                        "rating": current_user.rating, "isFreelancer": current_user.isExecutor, "confirmed": current_user.confirmed,
                         "additionalInfo": current_user.additionalInfo, "profession": current_user.profession})
     else:
-        return jsonify({"id": None, "username": "", "email": "", "password": "", "rating": float(0), "isExecutor": False,
+        return jsonify({"id": None, "username": "", "email": "", "password": "", "rating": float(0), "isFreelancer": False,
                         "confirmed": False, "additionalInfo": AdditionalInfo(description="", city="", country="", typeOfWork=""),
                         "profession": Profession(description="", specialization="")})
 
@@ -34,8 +32,8 @@ def login():
     password = request.form["password"]
     user = User.query.filter_by(email=email).first()
     if user and bcrypt.check_password_hash(user.password, password):
-        token_login = jwt.encode({'id': user.id, 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)}, app.config['SECRET_KEY'], algorithm="HS256")
-        return jsonify({"id": user.id, "username": user.username, "email": user.email, "password": user.password, "rating": float(0), "isExecutor": False,
+        token_login = create_access_token(identity=user.id)
+        return jsonify({"id": user.id, "username": user.username, "email": user.email, "password": user.password, "rating": float(0), "isFreelancer": False,
                     "token": token_login, "confirmed": user.confirmed, "additionalInfo": user.additionalInfo, "profession": user.profession})
     return jsonify({"error": "Login or password doesn't correct"})
 
@@ -62,7 +60,6 @@ def registration():
     db.session.add(user)
     db.session.commit()
 
-    # token_login = jwt.encode({'id': user.id}, app.config['SECRET_KEY'], algorithm="HS256")
     token_login = create_access_token(identity=user.id)
 
     print(token_login)
@@ -73,7 +70,7 @@ def registration():
     subject = "Please confirm your email"
     send_email(user.email, subject, html)
 
-    return jsonify({"id": user.id, "username": user.username, "email": user.email, "password": user.password, "rating": float(0), "isExecutor": False,
+    return jsonify({"id": user.id, "username": user.username, "email": user.email, "password": user.password, "rating": float(0), "isFreelancer": False,
                     "token": token_login, "confirmed": user.confirmed, "additionalInfo": user.additionalInfo, "profession": user.profession})
 
 
@@ -98,9 +95,9 @@ def confirm_email(token):
 def get_name(user_id):
     user = User.query.filter_by(id=user_id).first()
     try:
-        return jsonify({"username": user.username, "rating": user.rating, "isExecutor": user.isExecutor, "email": user.email})
+        return jsonify({"username": user.username, "rating": user.rating, "isFreelancer": user.isExecutor, "email": user.email})
     except AttributeError:
-        return jsonify({"username": "", "rating": float(0), "isExecutor": False, "email": ""})
+        return jsonify({"username": "", "rating": float(0), "isFreelancer": False, "email": ""})
 
 
 @app.route('/get_profession/<user_id>')
@@ -142,10 +139,34 @@ def add_new_card():
     active = request.form.get("active", type=lambda v: v.lower() == 'true')
     agreement = request.form.get("agreement", type=lambda v: v.lower() == 'true')
 
-    print("agreement " + str(agreement))
     user = User.query.filter_by(id=user_id).first()
     user.cards.append(Card(id=card_id, title=title, description=description, date=date, createTime=create_time,
                            cost=cost, active=active, agreement=agreement))
+    db.session.commit()
+    return jsonify({"message": "success"})
+
+
+@app.route('/change_card', methods=["GET", "POST"])
+def change_card():
+    user_id = request.form["id"]
+    card_id = request.form["cardId"]
+    title = request.form["title"]
+    description = request.form["description"]
+    date = request.form["date"]
+    cost = request.form.get("cost", type=int)
+    active = request.form.get("active", type=lambda v: v.lower() == 'true')
+    agreement = request.form.get("agreement", type=lambda v: v.lower() == 'true')
+
+    user = User.query.filter_by(id=user_id).first()
+    for card in user.cards:
+        if card.id == card_id:
+            card.title = title
+            card.description = description
+            card.date = date
+            card.cost = cost
+            card.active = active
+            card.agreement = agreement
+
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -155,7 +176,8 @@ def get_all_cards():
     users = User.query.all()
     users_cards = []
     for user in users:
-        users_cards.append(user.cards)
+        if user.isExecutor:
+            users_cards.append(user.cards)
     return jsonify(users_cards)
 
 
@@ -202,21 +224,28 @@ def set_additional_info():
     return jsonify({"message": "success"})
 
 
-@app.route('/set_is_executor_state', methods=["GET", "POST"])
-def set_is_executor_state():
+@app.route('/set_is_freelancer_state', methods=["GET", "POST"])
+def set_is_freelancer_state():
     user_id = request.form["id"]
-    state = request.form.get("isExecutor", type=lambda v: v.lower() == 'true')
+    state = request.form.get("isFreelancer", type=lambda v: v.lower() == 'true')
     user = User.query.filter_by(id=user_id).first()
     user.isExecutor = state
     db.session.commit()
     return jsonify({"message": "success"})
 
 
-@app.route('/get_all_executors', methods=["GET"])
-def get_all_executors():
+@app.route('/get_all_freelancers', methods=["GET"])
+def get_all_freelancers():
     users = User.query.all()
     users_list = []
     for user in users:
         if user.isExecutor:
             users_list.append(user)
     return jsonify(users_list)
+
+
+@app.route('/get_card_user/<user_id>', methods=["GET"])
+def get_card_user(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    return jsonify(user)
+
