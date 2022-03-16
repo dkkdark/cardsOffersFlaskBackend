@@ -69,10 +69,11 @@ class User(db.Model):
     rating: float = db.Column(db.Float, nullable=False)
     isExecutor: bool = db.Column(db.Boolean, nullable=False)
     confirmed: bool = db.Column(db.Boolean, nullable=False, default=False)
+    token: str = db.Column(db.String)
     additionalInfo: AdditionalInfo = db.relationship("AdditionalInfo", backref="user", uselist=False)
     profession: Profession = db.relationship("Profession", backref="user", uselist=False)
     cards: list[Card] = db.relationship('Card', backref='user', lazy=True)
 
     def __repr__(self):
-        return f"User('{self.id}, {self.username}', '{self.email}', '{self.password}')"
+        return f"User('{self.id}', {self.username}', '{self.email}', '{self.password}', '{self.token}')"
 

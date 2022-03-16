@@ -3,12 +3,11 @@ from flask import request, jsonify, url_for, render_template, flash, make_respon
 
 from . import app, db, bcrypt, models
 from project.models import User, AdditionalInfo, Profession, Card
-import jwt
-import datetime
 from project.tokens import login_token_required, generate_confirmation_token, confirm_token
 from project.send_email import send_email
 from .check_functions import check_username, check_email
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+import project.FCMAdmin as fcm
 
 
 @app.route('/is_current_user_exist', methods=['GET'])
@@ -249,3 +248,25 @@ def get_card_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     return jsonify(user)
 
+# token
+
+
+@app.route('/set_token', methods=["GET", "POST"])
+def set_token():
+    user_id = request.form["user_id"]
+    token = request.form["token"]
+    user = User.query.filter_by(id=user_id).first()
+    user.token = token
+    db.session.commit()
+    return jsonify({"message": "success"})
+
+
+@app.route('/send_message', methods=["GET", "POST"])
+def send_message():
+    user_id = request.form["user_id"]
+    title = request.form["title"]
+    body = request.form["body"]
+    user = User.query.filter_by(id=user_id).first()
+    tokens = [user.token]
+    fcm.sendPush(title, body, tokens)
+    return jsonify({"message": "success"})

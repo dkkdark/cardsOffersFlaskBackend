@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from flask_socketio import SocketIO
 
 from flask import Flask
 from flask_login import LoginManager
