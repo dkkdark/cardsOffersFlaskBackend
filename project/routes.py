@@ -1,8 +1,12 @@
+import base64
+from io import BytesIO
+
 from cffi.backend_ctypes import long
-from flask import request, jsonify, url_for, render_template, flash, make_response
+from flask import request, jsonify, url_for, render_template, flash, make_response, send_file
+from werkzeug.utils import secure_filename
 
 from . import app, db, bcrypt, models
-from project.models import User, AdditionalInfo, Profession, Card
+from project.models import User, AdditionalInfo, Profession, Card, Token, Image
 from project.tokens import login_token_required, generate_confirmation_token, confirm_token
 from project.send_email import send_email
 from .check_functions import check_username, check_email
@@ -54,8 +58,9 @@ def registration():
 
     additional = AdditionalInfo(city="", country="", description="", typeOfWork="")
     profession = Profession(specialization="", description="", tags=[])
+    image = Image(img="", name="", mimeType="")
     user = User(id=user_id, username=username, email=email, password=crypt_pass, rating=float(0), isExecutor=False,
-                       additionalInfo=additional, profession=profession)
+                       additionalInfo=additional, profession=profession, profileImg=image)
     db.session.add(user)
     db.session.commit()
 
@@ -184,7 +189,6 @@ def get_all_cards():
 def set_name():
     user_id = request.form["id"]
     name = request.form["username"]
-
     user = User.query.filter_by(id=user_id).first()
     user.username = name
     db.session.commit()
@@ -220,6 +224,7 @@ def set_additional_info():
     user.additionalInfo.city = city
     user.additionalInfo.typeOfWork = type_of_work
     db.session.commit()
+
     return jsonify({"message": "success"})
 
 
@@ -248,7 +253,8 @@ def get_card_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     return jsonify(user)
 
-# token
+
+# messaging token
 
 
 @app.route('/set_token', methods=["GET", "POST"])
@@ -256,7 +262,39 @@ def set_token():
     user_id = request.form["user_id"]
     token = request.form["token"]
     user = User.query.filter_by(id=user_id).first()
-    user.token = token
+    user.tokens.append(Token(token=token))
+    db.session.commit()
+    return jsonify({"message": "success"})
+
+
+@app.route('/replace_token', methods=["GET", "POST"])
+def replace_token():
+    user_id = request.form["user_id"]
+    old_token = request.form["old_token"]
+    new_token = request.form["new_token"]
+    user = User.query.filter_by(id=user_id).first()
+    print(user_id)
+    print(user)
+
+    for token in user.tokens:
+        if token.token == old_token:
+            Token.query.filter_by(token=token.token).delete()
+            user.tokens.append(Token(token=new_token))
+            print("Token have replaced")
+    db.session.commit()
+    return jsonify({"message": "success"})
+
+
+@app.route('/clear_token', methods=["GET", "POST"])
+def clear_token():
+    user_id = request.form["user_id"]
+    token = request.form["token"]
+    user = User.query.filter_by(id=user_id).first()
+
+    for user_token in user.tokens:
+        if user_token.token == token:
+            Token.query.filter_by(token=user_token.token).delete()
+            print("Token have removed")
     db.session.commit()
     return jsonify({"message": "success"})
 
@@ -264,9 +302,62 @@ def set_token():
 @app.route('/send_message', methods=["GET", "POST"])
 def send_message():
     user_id = request.form["user_id"]
+    sender_id = request.form["sender_id"]
     title = request.form["title"]
     body = request.form["body"]
+    card_id = request.form["card_id"]
+    card_title = request.form["card_title"]
+    card_cost = request.form["card_cost"]
+
     user = User.query.filter_by(id=user_id).first()
-    tokens = [user.token]
-    fcm.sendPush(title, body, tokens)
+
+    to_who_send = []
+    for t in user.tokens:
+        to_who_send.append(t.token)
+    fcm.send_push(sender_id, title, body, to_who_send, card_id, card_title, card_cost)
     return jsonify({"message": "success"})
+
+
+@app.route('/delete_card', methods=["GET", "POST"])
+def delete_card():
+    user_id = request.form["user_id"]
+    card_id = request.form["card_id"]
+
+    user = User.query.filter_by(id=user_id).first()
+
+    for card in user.cards:
+        if card.id == card_id:
+            Card.query.filter_by(id=card_id).delete()
+            print("card deleted")
+    db.session.commit()
+    return jsonify({"message": "success"})
+
+
+# Image upload
+
+
+@app.route('/upload_img', methods=['POST', "GET"])
+def upload_img():
+    pic = request.files['pic']
+    user_id = request.form["user_id"]
+    replaced_user_id = user_id.replace('"', '')
+
+    filename = secure_filename(pic.filename)
+    mimetype = pic.mimetype
+
+    user = User.query.filter_by(id=replaced_user_id).first()
+    # image = Image(img=pic.read(), name=filename, mimeType=mimetype)
+    user.profileImg.img = pic.read()
+    user.profileImg.name = filename
+    user.profileImg.mimeType = mimetype
+    db.session.commit()
+
+    print("Img was stored")
+    return jsonify({"message": "success"})
+
+
+@app.route("/get_img/<user_id>")
+def get_img(user_id):
+    image = Image.query.filter_by(user_id=user_id).first()
+    data = base64.b64encode(image.img).decode("ascii")
+    return jsonify({"img": data, "name": image.name})

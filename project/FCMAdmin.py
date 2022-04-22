@@ -5,13 +5,16 @@ cred = credentials.Certificate("/Users/blohinaksenia/PycharmProjects/backendForC
 firebase_admin.initialize_app(cred)
 
 
-def sendPush(title, msg, registration_token, dataObject=None):
+def send_push(sender_id, title, msg, registration_token, card_id, card_title, card_cost):
     message = messaging.MulticastMessage(
-        notification=messaging.Notification(
-            title=title,
-            body=msg
-        ),
-        data=dataObject,
+        data={
+            "id": sender_id,
+            "title": title,
+            "body": msg,
+            "card_id": card_id,
+            "card_title": card_title,
+            "card_cost": card_cost,
+        },
         tokens=registration_token,
     )
 
