@@ -52,7 +52,7 @@ class Card(db.Model):
     user_id: str = db.Column(db.String, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
-        return f"Card('{self.title}', '{self.description}', '{self.date}', '{self.createTime}', '{self.cost}', '{self.active}', '{self.agreement}')"
+        return f"Card(''{self.id}', '{self.title}', '{self.description}', '{self.date}', '{self.createTime}', '{self.cost}'')"
 
 
 @dataclass
@@ -67,7 +67,7 @@ class Token(db.Model):
 class Image(db.Model):
     __tablename__ = "image"
     id: int = db.Column(db.Integer, primary_key=True)
-    img: str = db.Column(db.Text, unique=True, nullable=False)
+    img: str = db.Column(db.Text, nullable=False)
     name: str = db.Column(db.Text, nullable=False)
     mimeType: str = db.Column(db.Text, nullable=False)
     user_id: str = db.Column(db.String, db.ForeignKey('user.id'), nullable=False)
@@ -90,4 +90,4 @@ class User(db.Model):
     cards: list[Card] = db.relationship('Card', backref='user', lazy=True)
 
     def __repr__(self):
-        return f"User('{self.id}', '{self.username}', '{self.email}', '{self.tokens}', {self.cards})"
+        return f"User('{self.id}', '{self.username}', '{self.email}')"

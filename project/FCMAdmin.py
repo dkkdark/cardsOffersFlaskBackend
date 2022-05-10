@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, messaging
 
-cred = credentials.Certificate("/Users/blohinaksenia/PycharmProjects/backendForCardsApp/serviceAccountKey.json")
+cred = credentials.Certificate("/Users/blohinaksenia/PycharmProjects/backendForCardsApp/cardstasks-firebase-adminsdk-dda7b-0cec00be5b.json")
 firebase_admin.initialize_app(cred)
 
 
