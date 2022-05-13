@@ -28,15 +28,15 @@ app.config['SECURITY_PASSWORD_SALT'] = 'my_precious_two'
 app.config["JWT_SECRET_KEY"] = 'NKzaz6EZ1sckfnMEvQzJxp2WANn0aHRs52olHLNW_JU'
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(weeks=25)
 
-app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 
 app.config['MAIL_USERNAME'] = "cards.send.confirmation@gmail.com"
-app.config['MAIL_PASSWORD'] = "focfaw-paCbo5-woqxid"
+app.config['MAIL_PASSWORD'] = "igwmtnscckcyldao"
 
-app.config['MAIL_DEFAULT_SENDER'] = 'from@example.com'
+app.config['MAIL_DEFAULT_SENDER'] = "cards.send.confirmation@gmail.com"
 
 ##
 # end config

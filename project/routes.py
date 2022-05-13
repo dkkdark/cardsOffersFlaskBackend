@@ -25,7 +25,7 @@ def is_current_user_exist():
     if current_user:
         return jsonify({"id": current_user.id, "username": current_user.username, "email": current_user.email,
                         "password": current_user.password,
-                        "rating": current_user.rating, "isFreelancer": current_user.isExecutor,
+                        "rating": current_user.rating, "isFreelancer": current_user.isFreelancer,
                         "confirmed": current_user.confirmed,
                         "additionalInfo": current_user.additionalInfo, "profession": current_user.profession})
     return jsonify(
@@ -39,12 +39,15 @@ def login():
     email = request.form["email"]
     password = request.form["password"]
     user = User.query.filter_by(email=email).first()
+    img = ""
+    if user.profileImg.img != "":
+        img = base64.b64encode(user.profileImg.img).decode("ascii")
+
     if user and bcrypt.check_password_hash(user.password, password):
         token_login = create_access_token(identity=user.id)
         return jsonify({"id": user.id, "username": user.username, "email": user.email, "password": user.password,
-                        "rating": float(0), "isFreelancer": False,
-                        "token": token_login, "confirmed": user.confirmed, "additionalInfo": user.additionalInfo,
-                        "profession": user.profession})
+                        "rating": float(0), "isFreelancer": user.isFreelancer, "token": token_login, "confirmed": user.confirmed,
+                        "additionalInfo": user.additionalInfo, "profession": user.profession, "img": img})
     return jsonify({"error": "Login or password doesn't correct"})
 
 
@@ -68,20 +71,20 @@ def registration():
         additional = AdditionalInfo(city="", country="", description="", typeOfWork="")
         profession = Profession(specialization="", description="", tags=[])
         image = Image(img="", name="", mimeType="")
-        user = User(id=user_id, username=username, email=email, password=crypt_pass, rating=float(0), isExecutor=False,
+        user = User(id=user_id, username=username, email=email, password=crypt_pass, rating=float(0), isFreelancer=False,
                     additionalInfo=additional, profession=profession, profileImg=image)
-        db.session.add(user)
-        db.session.commit()
 
         token_login = create_access_token(identity=user.id)
 
-        print(token_login)
         # confirm with email
         confirmation_token = generate_confirmation_token(user.email)
         confirm_url = url_for('confirm_email', token=confirmation_token, _external=True)
         html = render_template('confirm_email.html', confirm_url=confirm_url)
         subject = "Please confirm your email"
         send_email(user.email, subject, html)
+
+        db.session.add(user)
+        db.session.commit()
 
         return jsonify(
             {"id": user.id, "username": user.username, "email": user.email, "password": user.password, "rating": float(0),
@@ -114,7 +117,7 @@ def get_name(user_id):
     user = User.query.filter_by(id=user_id).first()
     try:
         return jsonify(
-            {"username": user.username, "rating": user.rating, "isFreelancer": user.isExecutor, "email": user.email})
+            {"username": user.username, "rating": user.rating, "isFreelancer": user.isFreelancer, "email": user.email})
     except AttributeError:
         return jsonify({"username": "", "rating": float(0), "isFreelancer": False, "email": ""})
 
@@ -195,7 +198,7 @@ def get_all_cards():
     users = User.query.all()
     users_cards = []
     for user in users:
-        if user.isExecutor:
+        if user.isFreelancer:
             users_cards.append(user.cards)
     return jsonify(users_cards)
 
@@ -249,22 +252,23 @@ def set_is_freelancer_state():
     user_id = request.form["id"]
     state = request.form.get("isFreelancer", type=lambda v: v.lower() == 'true')
     user = User.query.filter_by(id=user_id).first()
-    user.isExecutor = state
+    user.isFreelancer = state
     db.session.commit()
     return jsonify({"message": "success"})
 
 
-@app.route('/get_all_freelancers', methods=["GET"])
+@app.route('/get_all_freelancers', methods=["GET", "POST"])
 def get_all_freelancers():
     users = User.query.all()
     users_list = []
     for user in users:
-        if user.isExecutor:
-            users_list.append(user)
+        if user.isFreelancer:
+            users_list.append(User(id=user.id, username=user.username, rating=user.rating, isFreelancer=user.isFreelancer,
+                                   additionalInfo=user.additionalInfo, profession=user.profession))
     return jsonify(users_list)
 
 
-@app.route('/get_card_user/<user_id>', methods=["GET"])
+@app.route('/get_card_user/<user_id>', methods=["GET", "POST"])
 def get_card_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     return jsonify(user)
@@ -308,8 +312,8 @@ def update_profile_info():
     user.additionalInfo.country = data.additionalInfo.country
     user.additionalInfo.description = data.additionalInfo.description
     user.additionalInfo.typeOfWork = data.additionalInfo.typeOfWork
-    user.isExecutor = data.isFreelancer
-    user.isExecutor = data.isFreelancer
+    user.isFreelancer = data.isFreelancer
+    user.isFreelancer = data.isFreelancer
     user.profession.description = data.profession.description
     user.profession.specialization = data.profession.specialization
     user.profession.tags = data.profession.tags

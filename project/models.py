@@ -81,7 +81,7 @@ class User(db.Model):
     email: str = db.Column(db.String(), unique=True)
     password: str = db.Column(db.String())
     rating: float = db.Column(db.Float)
-    isExecutor: bool = db.Column(db.Boolean)
+    isFreelancer: bool = db.Column(db.Boolean)
     confirmed: bool = db.Column(db.Boolean, default=False)
     tokens: list[Token] = db.relationship("Token", backref="user", lazy=True)
     additionalInfo: AdditionalInfo = db.relationship("AdditionalInfo", backref="user", uselist=False)
