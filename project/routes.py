@@ -263,15 +263,15 @@ def get_all_freelancers():
     users_list = []
     for user in users:
         if user.isFreelancer:
-            users_list.append(User(id=user.id, username=user.username, rating=user.rating, isFreelancer=user.isFreelancer,
-                                   additionalInfo=user.additionalInfo, profession=user.profession))
+            users_list.append(user)
     return jsonify(users_list)
 
 
 @app.route('/get_card_user/<user_id>', methods=["GET", "POST"])
 def get_card_user(user_id):
     user = User.query.filter_by(id=user_id).first()
-    return jsonify(user)
+    return jsonify(User(id=user.id, username=user.username, email=user.email, rating=float(0), isFreelancer=user.isFreelancer,
+                    additionalInfo=user.additionalInfo, profession=user.profession))
 
 
 @app.route('/update_cards', methods=["GET", "POST"])
@@ -430,11 +430,13 @@ def upload_img():
 @app.route("/get_img/<user_id>")
 def get_img(user_id):
     user = User.query.filter_by(id=user_id).first()
-    image = user.profileImg.img
+    image = user.profileImg
     name = ""
-    if image != "":
+    if image.img != "":
         data = base64.b64encode(image.img).decode("ascii")
         name = image.name
     else:
         data = ""
     return jsonify({"img": data, "name": name})
+
+

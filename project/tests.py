@@ -40,7 +40,7 @@ def test_login(client):
     assert response.json["error"] == "Login or password doesn't correct"
 
 
-def test_is_current_user_exist(client):
+def test_update_cards(client):
     response = client.post("update_cards", data={
         "cards": "fsdf"
     })
